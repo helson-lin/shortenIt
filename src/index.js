@@ -21,22 +21,25 @@ async function generateHtml() {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<link href="https://fonts.font.im/css?family=Hanalei+Fill|Oleo+Script|Righteous|Roboto" rel="stylesheet">
 			<script src="https://cdn.tailwindcss.com"></script>
             <title>Shorten It</title>
             <style>
-                body { font-family: Arial, sans-serif; }
+                body { font-family: Righteous, PingFang SC, Fira Sans, sans-serif; background: #f2f2f2; }
                 form { margin: 20px; }
                 input[type="text"] { width: 300px; padding: 10px; }
                 input[type="submit"] { padding: 10px; }
             </style>
         </head>
-        <body>
-            <h1 class="text-2xl font-bold mb-4 mt-4 mx-auto flex justify-center items-center">短链接生成器</h1>
-            <form id="urlForm" class="mx-auto flex justify-center items-center">
-                <input class="" type="text" id="longUrl" placeholder="输入长链接" required class="mr-2 border border-gray-300 p-2 rounded"/>
-                <input type="submit" value="生成短链接" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"/>
-            </form>
-            <div id="result"></div>
+        <body class="w-screen h-screen flex flex-col">
+            <h1 class="text-2xl font-extrabold mb-4 mt-4 mx-auto flex justify-center items-center font-semibold sm:text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500" style="font-family: 'Oleo Script', cursive;">Shorten It</h1>
+			<div class="w-full flex-1 px-8 py-24 sm:px-0">
+				<form id="urlForm" class="mx-auto flex justify-center items-center md:flex">
+					<input class="border border-gray-300 mr-2 p-0 rounded" name="longUrl" type="text" id="longUrl" placeholder="please input the long url" required/>
+					<input type="submit" value="generate" class="bg-gray-800 hover:bg-black hover:cursor-pointer text-white font-bold py-2 px-4 rounded"/>
+				</form>
+				<div id="result" class="md:text-base flex flex-col justify-center items-center"></div>
+			</div>
             <script>
                 document.getElementById('urlForm').onsubmit = async (e) => {
                     e.preventDefault();
@@ -49,12 +52,12 @@ async function generateHtml() {
                     const data = await response.json();
 					if (response.ok) {
 						if (data.have) {
-								document.getElementById('result').innerHTML = '原地址已存在，短链接: <a href="' + data.shortUrl + '">' + data.shortUrl + '</a>' ;
+								document.getElementById('result').innerHTML = '<p>The original address already exists, short link：</p>  <a href="' + data.shortUrl + '" target="_blank" class="text-blue-500 hover:text-blue-700">' + data.shortUrl + '</a>' ;
 						} else {
-						 document.getElementById('result').innerHTML = '短链接: <a href="' + data.shortUrl + '">' + data.shortUrl + '</a>' ;
+						 document.getElementById('result').innerHTML = 'short link：  <br> <a href="' + data.shortUrl + '"  class="text-blue-500 hover:text-blue-700">' + data.shortUrl + '</a>' ;
 						}
 					} else {
-						document.getElementById('result').innerHTML = '错误: ' + data.message;
+						document.getElementById('result').innerHTML = 'Error: ' + data.message;
 					}
                 };
             </script>
