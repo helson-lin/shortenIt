@@ -15,6 +15,7 @@ function generateShortUrl() {
 
 // 生成 HTML 页面
 async function generateHtml() {
+	const shortUrlsLen = await SHORT_URLS.get('shortUrlsLen');
     return `
         <!DOCTYPE html>
         <html lang="zh">
@@ -34,8 +35,9 @@ async function generateHtml() {
         <body class="w-screen h-screen flex flex-col">
             <h1 class="text-2xl font-extrabold mb-4 mt-4 mx-auto flex justify-center items-center font-semibold sm:text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500" style="font-family: 'Oleo Script', cursive;">Shorten It</h1>
 			<div class="w-full flex-1 px-8 py-24 sm:px-0">
+				<p id="websitesNUM" class="flex justify-center items-center py-2 text-base">Now have ${shortUrlsLen}s websites be Shorten</p>
 				<form id="urlForm" class="mx-auto flex justify-center items-center md:flex">
-					<input class="border border-gray-300 mr-2 p-0 rounded" name="longUrl" type="text" id="longUrl" placeholder="please input the long url" required/>
+					<input class="border border-gray-300 mr-2 p-0 rounded" name="longUrl" type="text" pattern="https?://.+" id="longUrl" placeholder="please input the long url" required/>
 					<input type="submit" value="generate" class="bg-gray-800 hover:bg-black hover:cursor-pointer text-white font-bold py-2 px-4 rounded"/>
 				</form>
 				<div id="result" class="md:text-base flex flex-col justify-center items-center"></div>
@@ -52,9 +54,11 @@ async function generateHtml() {
                     const data = await response.json();
 					if (response.ok) {
 						if (data.have) {
-								document.getElementById('result').innerHTML = '<p>The original address already exists, short link：</p>  <a href="' + data.shortUrl + '" target="_blank" class="text-blue-500 hover:text-blue-700">' + data.shortUrl + '</a>' ;
+							document.getElementById('result').innerHTML = '<p>The original address already exists, short link：</p>  <a href="' + data.shortUrl + '" target="_blank" class="text-blue-500 hover:text-blue-700">' + data.shortUrl + '</a>' ;
+							document.getElementById('websitesNUM').innerHTML = 'Now have '+ data?.shortUrlsLen +'s websites be Shorten'
 						} else {
-						 document.getElementById('result').innerHTML = 'short link：  <br> <a href="' + data.shortUrl + '"  class="text-blue-500 hover:text-blue-700">' + data.shortUrl + '</a>' ;
+						 	document.getElementById('result').innerHTML = 'short link：  <br> <a href="' + data.shortUrl + '"  class="text-blue-500 hover:text-blue-700">' + data.shortUrl + '</a>' ;
+							document.getElementById('websitesNUM').innerHTML = 'Now have '+ data?.shortUrlsLen +'s websites be Shorten'
 						}
 					} else {
 						document.getElementById('result').innerHTML = 'Error: ' + data.message;
@@ -70,19 +74,27 @@ async function generateHtml() {
 async function handleRequest(request) {
     const url = new URL(request.url);
     const BASE_URL = `${url.protocol}//${url.host}/`; // 自动识别服务的域名
-
+	function isValidURL(url) {
+		var pattern = new RegExp('^(https?:\\/\\/)?'+ // 'http://' 或 'https://'
+		  '((([a-zA-Z\\d]([a-zA-Z\\d-]*[a-zA-Z\\d])*)\\.)+[a-zA-Z]{2,}|'+ // 域名
+		  '((\\d{1,3}\\.){3}\\d{1,3}))'+ // 或者IP
+		  '(\\:\\d+)?(\\/[-a-zA-Z\\d%_.~+]*)*'+ // 端口和路径
+		  '(\\?[;&a-zA-Z\\d%_.~+=-]*)?'+ // 查询字符串
+		  '(\\#[-a-zA-Z\\d_]*)?$','i'); // 锚点
+		return pattern.test(url);
+	  }
     if (request.method === 'POST') {
         const body = await request.json();
         const longUrl = body.longUrl;
-
-        if (!longUrl) {
+        if (!longUrl || !isValidURL(longUrl)) {
             return new Response(JSON.stringify({ message: 'Invalid URL' }), { status: 400 });
         }
 
         // 检查长链接是否已经存在
+		let shortUrlsLen = await SHORT_URLS.get('shortUrlsLen');
         const existingShortUrl = await SHORT_URLS.get(longUrl);
         if (existingShortUrl) {
-            return new Response(JSON.stringify({ shortUrl: existingShortUrl, have: true }), {
+            return new Response(JSON.stringify({ shortUrl: existingShortUrl, have: true, shortUrlsLen: shortUrlsLen || 0 }), {
                 headers: { 'Content-Type': 'application/json' },
             });
         }
@@ -97,12 +109,15 @@ async function handleRequest(request) {
             existingUrl = await SHORT_URLS.get(shortUrl);
         } while (existingUrl);
 
+		// const shortUrlsLen = await SHORT_URLS.get('length');
+
         // 存储短链和长链接
         await SHORT_URLS.put(shortUrl, longUrl);
         // 将长链接和短链接的映射存入 KV
         await SHORT_URLS.put(longUrl, BASE_URL + shortUrl);
-
-        return new Response(JSON.stringify({ shortUrl: BASE_URL + shortUrl, have: false }), {
+		shortUrlsLen = (shortUrlsLen ? Number(shortUrlsLen) : 0) + 1
+		await SHORT_URLS.put('shortUrlsLen', shortUrlsLen);
+        return new Response(JSON.stringify({ shortUrl: BASE_URL + shortUrl, have: false, shortUrlsLen }), {
             headers: { 'Content-Type': 'application/json' },
         });
     } else {
@@ -118,7 +133,6 @@ async function handleRedirect(request) {
     const url = new URL(request.url);
     const shortPath = url.pathname.slice(1); // 获取路径部分
     const longUrl = await SHORT_URLS.get(shortPath);
-
     // 重定向到原始 URL
     if (longUrl) {
         return Response.redirect(longUrl, 302);
