@@ -24,21 +24,21 @@ async function generateHtml() {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
 			<link href="https://fonts.font.im/css?family=Hanalei+Fill|Oleo+Script|Righteous|Roboto" rel="stylesheet">
 			<script src="https://cdn.tailwindcss.com"></script>
-			<script src="https://cdn.bootcdn.net/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>            <title>Shorten It</title>
+			<script src="https://cdn.bootcdn.net/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" async></script>            <title>Shorten It</title>
             <style>
                 body { font-family: Righteous, PingFang SC, Fira Sans, sans-serif; background: #f2f2f2; }
                 form { margin: 20px; }
-                input[type="text"] { width: 300px; padding: 10px; }
+                input[type="text"] { padding: 10px; }
                 input[type="submit"] { padding: 10px; }
             </style>
         </head>
-        <body class="w-screen h-screen flex flex-col">
-            <h1 class="text-2xl font-extrabold mb-4 mt-4 mx-auto flex justify-center items-center font-semibold sm:text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500" style="font-family: 'Oleo Script', cursive;">Shorten It</h1>
+        <body class="w-screen h-screen flex flex-col pt-14">
+            <h1 class="text-2xl font-extrabold mb-4 mt-8 mx-auto flex justify-center items-center font-semibold sm:text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500" style="font-family: 'Oleo Script', cursive;">Shorten It</h1>
 			<div class="w-full flex-1 px-8 py-24 sm:px-0">
-				<p id="websitesNUM" class="flex justify-center items-center py-2 text-base">Now have ${shortUrlsLen}s websites be Shorten</p>
-				<form id="urlForm" class="mx-auto flex justify-center items-center md:flex">
-					<input class="border border-gray-300 mr-2 p-0 rounded" name="longUrl" type="text" pattern="https?://.+" id="longUrl" placeholder="please input the long url" required/>
-					<input type="submit" value="generate" class="bg-gray-800 hover:bg-black hover:cursor-pointer text-white font-bold py-2 px-4 rounded"/>
+				<p id="websitesNUM" class="flex justify-center items-center py-2 text-lg">Now have ${shortUrlsLen}s websites be Shorten</p>
+				<form id="urlForm" class="mx-auto flex flex-col justify-center items-center md:flex-row">
+					<input class="border border-gray-300 p-0 rounded w-full md:w-1/3 md:mr-2" name="longUrl" type="text" pattern="https?://.+" id="longUrl" placeholder="please input the long url" required/>
+					<input type="submit" value="generate" class="w-full md:w-24 mt-4 md:mt-0 bg-gray-800 hover:bg-black hover:cursor-pointer text-white font-bold py-2 px-4 rounded"/>
 				</form>
 				<div id="result" class="md:text-base flex flex-col justify-center items-center mt-4"></div>
 				<div id="resultQrCode" class="flex justify-center items-center mt-2"></div>
@@ -112,6 +112,9 @@ async function handleRequest(request) {
 		}
 
 		// 检查长链接是否已经存在
+		if (longUrl.length > 512) {
+			return new Response(JSON.stringify({ message: 'URL is too long' }), { status: 400 });
+		}
 		let shortUrlsLen = await SHORT_URLS.get('shortUrlsLen');
 		const existingShortUrl = await SHORT_URLS.get(longUrl);
 		if (existingShortUrl) {
@@ -123,7 +126,6 @@ async function handleRequest(request) {
 		// 生成短链并存储
 		let shortUrl;
 		let existingUrl;
-
 		// 确保短链唯一
 		do {
 			shortUrl = generateShortUrl();
